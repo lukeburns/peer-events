@@ -2,7 +2,6 @@ var PeerEmitter = require('./')
 var createHash = require('create-hash')
 
 var peer = new PeerEmitter()
-console.log('your public key is:', peer.keyPair.publicKey.toString('hex'))
 
 // join: 'greetings' to join the room 'greetings'
 // send: 'greetings : hello world' to emit the 'hello world' to all connected peers listening to 'greetings'
