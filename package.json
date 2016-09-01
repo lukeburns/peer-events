@@ -1,6 +1,7 @@
 {
   "name": "peer-events",
   "version": "0.0.1",
+  "bin": "./example.js",
   "description": "A p2p event emitter",
   "main": "index.js",
   "dependencies": {

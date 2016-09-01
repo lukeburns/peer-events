@@ -1,9 +1,10 @@
+#!/usr/bin/env node
 var PeerEmitter = require('.')
 
 var peer = new PeerEmitter()
 
-// join: 'greetings' to join the room 'greetings'
-// send: 'greetings : hello world' to emit the 'hello world' to all connected peers listening to 'greetings'
+console.log('To open the greetings channel, type \'greetings\'')
+console.log('To send \'hello world\' to peers on \'greetings\', type \'greetings : hello world\'')
 
 process.stdin.on('data', function (data) {
   var split = data.toString().split(':'),
@@ -17,6 +18,10 @@ process.stdin.on('data', function (data) {
       console.log(channel, ':', message.toString())
     })
   }
+})
+
+peer.client.on('connection', function () {
+  console.log(': new connection')
 })
 
 function id (key) {
