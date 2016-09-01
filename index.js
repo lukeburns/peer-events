@@ -19,16 +19,16 @@ Peer.prototype.open = function (name) {
   var keyPair = this.keyPair
   if (!name) name = keyPair.publicKey
   if (this.swarms[name]) return
+  var key = (typeof name === 'string') ? hash(name) : name
 
   var sw = this.swarms[name] = swarm()
-  sw.join(name)
+  sw.join(key)
 
   var self = this
   sw.on('connection', function (socket) {
     var stream = protocol({ keyPair }) // todo: proof of identification
     stream.pipe(socket).pipe(stream)
 
-    var key = (typeof name === 'string') ? hash(name) : name
     var channel = stream.open(key)
     channel.on('handshake', function () {
       self.server.on(name, function (data) {

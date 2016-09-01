@@ -1,5 +1,4 @@
-var PeerEmitter = require('./')
-var createHash = require('create-hash')
+var PeerEmitter = require('.')
 
 var peer = new PeerEmitter()
 
@@ -9,13 +8,12 @@ var peer = new PeerEmitter()
 process.stdin.on('data', function (data) {
   var split = data.toString().split(':'),
       channel = split[0].trim(),
-      msg = (split[1] || '').trim(),
-      hash = createHash('sha256').update(channel).digest()
+      msg = (split[1] || '').trim()
 
-  peer.emit(hash, msg)
+  peer.emit(channel, msg)
 
-  if (!peer.client._events[hash]) {
-    peer.on(hash, function (message) {
+  if (!peer.client._events[channel]) {
+    peer.on(channel, function (message) {
       console.log(channel, ':', message.toString())
     })
   }
