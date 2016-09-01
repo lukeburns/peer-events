@@ -1,12 +1,13 @@
 var events = require('events')
 var createHash = require('create-hash')
 var protocol = require('peer-protocol').use('message')
-var swarm = require('discovery-swarm')
+var swarm = require('webrtc-swarm')
+var signalhub = require('signalhub')
 var signatures = require('sodium-signatures')
 
-module.exports = PeerEmitter
+module.exports = Peer
 
-function PeerEmitter (keyPair) {
+function Peer (keyPair) {
   if (!keyPair) keyPair = signatures.keyPair()
   this.keyPair = keyPair
 
@@ -15,35 +16,33 @@ function PeerEmitter (keyPair) {
   this.client = new events.EventEmitter()
 }
 
-PeerEmitter.prototype.open = function (name) {
+Peer.prototype.open = function (name) {
   var keyPair = this.keyPair
   var id = keyPair.publicKey
   if (!name) name = id
   if (this.swarms[name]) return
-  var key = (typeof name === 'string') ? hash(name) : name
 
-  var sw = this.swarms[name] = swarm()
-  sw.join(key)
+  var hub = signalhub(name, ['http://130.211.202.124/'])
+  var sw = this.swarms[name] = swarm(hub)
 
   var self = this
-  sw.on('connection', function (socket) {
+  sw.on('peer', function (peer) {
     var stream = protocol({ id }) // todo: proof of identification
-    stream.pipe(socket).pipe(stream)
-
-    var channel = stream.open(key)
+    stream.pipe(peer).pipe(stream)
+    var channel = stream.open(hash(name))
     channel.on('handshake', function (handshake) {
       self.server.on(name, function (data) {
         channel.message(data)
       })
       channel.on('message', function (message) {
-        self.client.emit(name, message)
+        self.client.emit(name, message, stream.remoteId)
       })
       self.client.emit('connection', name, handshake)
     })
   })
 }
 
-PeerEmitter.prototype.on = function (name, handler) {
+Peer.prototype.on = function (name, handler) {
   if (!handler) {
     handler = name
     name = this.keyPair.publicKey
@@ -52,7 +51,7 @@ PeerEmitter.prototype.on = function (name, handler) {
   return this.client.on(name, handler)
 }
 
-PeerEmitter.prototype.emit = function (name, data) {
+Peer.prototype.emit = function (name, data) {
   if (typeof data === 'undefined') {
     data = name
     name = this.keyPair.publicKey

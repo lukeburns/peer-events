@@ -2,7 +2,7 @@
 var PeerEmitter = require('.')
 
 var peer = new PeerEmitter()
-
+console.log('Your name is:', window.peer.keyPair.publicKey.toString('hex').slice(0, 5))
 console.log('To open the greetings channel, type \'greetings\'')
 console.log('To send \'hello world\' to peers on \'greetings\', type \'greetings : hello world\'')
 
@@ -20,8 +20,9 @@ process.stdin.on('data', function (data) {
   }
 })
 
-peer.client.on('connection', function () {
-  console.log(': new connection')
+peer.client.on('connection', function (name, handshake) {
+  var id = handshake.id.toString('hex').slice(0, 5)
+  console.log(id, 'joined channel', name)
 })
 
 function id (key) {
