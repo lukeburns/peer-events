@@ -32,13 +32,14 @@ PeerEmitter.prototype.open = function (name) {
 
     var channel = stream.open(key)
     channel.on('handshake', function (handshake) {
+      var id = handshake.id.toString('hex')
       self.server.on(name, function (data) {
         channel.message(data)
       })
       channel.on('message', function (message) {
-        self.client.emit(name, message)
+        self.client.emit(name, message, id)
       })
-      self.client.emit('connection', name, handshake)
+      self.client.emit('connection', name, id)
     })
   })
 }

@@ -5,9 +5,9 @@ var swarm = require('webrtc-swarm')
 var signalhub = require('signalhub')
 var signatures = require('sodium-signatures')
 
-module.exports = Peer
+module.exports = PeerEmitter
 
-function Peer (keyPair) {
+function PeerEmitter (keyPair) {
   if (!keyPair) keyPair = signatures.keyPair()
   this.keyPair = keyPair
 
@@ -16,33 +16,35 @@ function Peer (keyPair) {
   this.client = new events.EventEmitter()
 }
 
-Peer.prototype.open = function (name) {
+PeerEmitter.prototype.open = function (name) {
   var keyPair = this.keyPair
   var id = keyPair.publicKey
   if (!name) name = id
   if (this.swarms[name]) return
+  var key = (typeof name === 'string') ? hash(name) : name
 
-  var hub = signalhub(name, ['http://130.211.202.124/'])
-  var sw = this.swarms[name] = swarm(hub)
+  var sw = this.swarms[name] = swarm(signalhub(key, ['http://130.211.202.124/']))
 
   var self = this
-  sw.on('peer', function (peer) {
+  sw.on('peer', function (socket) {
     var stream = protocol({ id }) // todo: proof of identification
-    stream.pipe(peer).pipe(stream)
-    var channel = stream.open(hash(name))
+    stream.pipe(socket).pipe(stream)
+
+    var channel = stream.open(key)
     channel.on('handshake', function (handshake) {
+      var id = handshake.id.toString('hex')
       self.server.on(name, function (data) {
         channel.message(data)
       })
       channel.on('message', function (message) {
-        self.client.emit(name, message, stream.remoteId)
+        self.client.emit(name, message, id)
       })
-      self.client.emit('connection', name, handshake)
+      self.client.emit('connection', name, id)
     })
   })
 }
 
-Peer.prototype.on = function (name, handler) {
+PeerEmitter.prototype.on = function (name, handler) {
   if (!handler) {
     handler = name
     name = this.keyPair.publicKey
@@ -51,7 +53,7 @@ Peer.prototype.on = function (name, handler) {
   return this.client.on(name, handler)
 }
 
-Peer.prototype.emit = function (name, data) {
+PeerEmitter.prototype.emit = function (name, data) {
   if (typeof data === 'undefined') {
     data = name
     name = this.keyPair.publicKey

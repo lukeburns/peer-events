@@ -2,7 +2,7 @@
 var PeerEmitter = require('.')
 
 var emitter = new PeerEmitter()
-console.log('Your name is:', emitter.keyPair.publicKey.toString('hex').slice(0, 5))
+console.log('Your name is:', shorten(emitter.keyPair.publicKey.toString('hex')))
 console.log('To open the greetings channel, type \'greetings\'')
 console.log('To send \'hello world\' to emitters on \'greetings\', type \'greetings : hello world\'')
 
@@ -14,17 +14,16 @@ process.stdin.on('data', function (data) {
   emitter.emit(channel, msg)
 
   if (!emitter.client._events[channel]) {
-    emitter.on(channel, function (message) {
-      console.log(channel, ':', message.toString())
+    emitter.on(channel, function (message, id) {
+      console.log(channel, ':', shorten(id), '>', message.toString())
     })
   }
 })
 
-emitter.client.on('connection', function (name, handshake) {
-  var id = handshake.id.toString('hex').slice(0, 5)
-  console.log(id, 'joined channel', name)
+emitter.client.on('connection', function (name, id) {
+  console.log(shorten(id), 'joined channel', name)
 })
 
-function id (key) {
+function shorten (key) {
   return key.toString('hex').slice(0, 5)
 }
