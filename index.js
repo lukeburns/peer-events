@@ -2,6 +2,7 @@ var events = require('events')
 var createHash = require('create-hash')
 var protocol = require('peer-protocol')
 var swarm = require('discovery-swarm')
+var swarmDefaults = require('datland-swarm-defaults')
 var signatures = require('sodium-signatures')
 
 module.exports = PeerEmitter
@@ -24,7 +25,7 @@ PeerEmitter.prototype.open = function (channel) {
 
   var key = (typeof channel === 'string') ? hash(channel) : channel
 
-  var sw = this.swarms[channel] = swarm()
+  var sw = this.swarms[channel] = swarm(swarmDefaults())
   sw.join(key)
 
   var self = this
