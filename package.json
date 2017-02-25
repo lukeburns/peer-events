@@ -1,11 +1,12 @@
 {
   "name": "peer-events",
-  "version": "0.0.5",
+  "version": "0.0.7",
   "bin": "./example.js",
   "description": "A p2p event emitter",
   "main": "index.js",
   "dependencies": {
     "create-hash": "^1.1.2",
+    "datland-swarm-defaults": "^1.0.2",
     "discovery-swarm": "^4.0.2",
     "peer-protocol": "0.0.1",
     "sodium-signatures": "^1.3.0"

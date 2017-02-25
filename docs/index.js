@@ -1,6 +1,6 @@
 var events = require('events')
 var createHash = require('create-hash')
-var protocol = require('peer-protocol').use('message')
+var protocol = require('peer-protocol')
 var swarm = require('webrtc-swarm')
 var signalhub = require('signalhub')
 var signatures = require('sodium-signatures')
@@ -11,59 +11,67 @@ function PeerEmitter (keyPair) {
   if (!keyPair) keyPair = signatures.keyPair()
   this.keyPair = keyPair
 
+  this.protocol = protocol.use('message') // default 'message'
   this.swarms = {}
-  this.server = new events.EventEmitter()
-  this.client = new events.EventEmitter()
+  this.remote = new events.EventEmitter()
+  this.local = new events.EventEmitter()
+  this.queues = {}
 }
 
-PeerEmitter.prototype.open = function (name) {
+PeerEmitter.prototype.open = function (channel) {
   var keyPair = this.keyPair
   var id = keyPair.publicKey
-  if (!name) name = id
-  if (this.swarms[name]) return
-  var key = (typeof name === 'string') ? hash(name) : name
+  if (!channel) channel = id
+  if (this.swarms[channel]) return this.swarms[channel]
 
-  var sw = this.swarms[name] = swarm(signalhub(key, ['http://130.211.202.124/']))
+  var key = (typeof channel === 'string') ? hash(channel) : channel
+  this.queues[channel] = this.queues[channel] || []
+
+  var sw = this.swarms[channel] = swarm(signalhub(key, ['http://localhost:8080']))
 
   var self = this
   sw.on('peer', function (socket) {
-    var stream = protocol({ id }) // todo: proof of identification
+    var stream = self.protocol({ id }) // todo: proof of identification
     stream.pipe(socket).pipe(stream)
 
-    var channel = stream.open(key)
-    channel.on('handshake', function (handshake) {
-      var id = handshake.id.toString('hex')
-      self.server.on(name, function (data) {
-        channel.message(data)
+    var ch = stream.open(key)
+    ch.on('handshake', function (handshake) {
+      var id = handshake.id
+      self.queues[channel].forEach(function (data) {
+        ch.message(data)
       })
-      channel.on('message', function (message) {
-        self.client.emit(name, message, id)
+      self.remote.on(channel, function (data) {
+        ch.message(data)
       })
-      self.client.emit('connection', name, id)
+      ch.on('message', function (message) {
+        self.local.emit(channel, message, id)
+      })
+      self.local.emit('connection', channel, id)
     })
   })
 }
 
-PeerEmitter.prototype.on = function (name, handler) {
-  if (!handler) {
-    handler = name
-    name = this.keyPair.publicKey
+PeerEmitter.prototype.on = function (channel, handler) {
+  if (typeof channel === 'function') {
+    handler = channel
+    channel = this.keyPair.publicKey
   }
-  this.open(name)
-  return this.client.on(name, handler)
+  this.open(channel)
+  return this.local.on(channel, handler)
 }
 
-PeerEmitter.prototype.emit = function (name, data) {
+PeerEmitter.prototype.emit = function (channel, data, queue) {
   if (typeof data === 'undefined') {
     data = name
     name = this.keyPair.publicKey
   }
-  this.open(name)
-  return this.server.emit(name, data)
+  this.open(channel)
+  if (queue !== false) this.queues[channel].push(data)
+  return this.remote.emit(channel, data)
 }
 
-function hash (name) {
+function hash (channel) {
   var hash = createHash('sha256')
-  hash.update(name)
+  hash.update(channel)
   return hash.digest()
 }
